@@ -158,13 +158,10 @@ export async function closeDb(): Promise<void> {
   }
 }
 
+import { schemaSql } from './db/schema.sqlite';
+
 async function runOrionMigrations(database: Database): Promise<void> {
-  const fs = await import('fs');
-  const schemaPath = path.resolve(__dirname, 'db/schema.sqlite.sql');
-  if (fs.existsSync(schemaPath)) {
-    const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-    await database.exec(schemaSql);
-  }
+  await database.exec(schemaSql);
 }
 
 async function ensureDefaultUser(database: Database): Promise<void> {
