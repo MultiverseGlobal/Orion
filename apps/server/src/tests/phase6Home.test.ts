@@ -130,7 +130,7 @@ describe('Orion Build Spec V1 — Phase 6 Home UX, Approval & Action Centre', ()
       body: JSON.stringify({ user_id: userId })
     });
     assert.strictEqual(res.status, 200);
-    const data = await res.json();
+    const data: any = await res.json();
     assert.strictEqual(data.success, true);
     
     // actionStateMachine returns the final state (COMPLETED if verified)
@@ -164,7 +164,7 @@ describe('Orion Build Spec V1 — Phase 6 Home UX, Approval & Action Centre', ()
       body: JSON.stringify({ user_id: userId })
     });
     
-    const data = await res.json();
+    const data: any = await res.json();
     assert.strictEqual(data.success, true); // The HTTP call succeeded
     assert.strictEqual(data.action.status, 'FAILED');
     assert.ok(data.action.error.includes('Intentional verification failure'));
