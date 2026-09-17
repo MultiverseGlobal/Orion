@@ -1,339 +1,270 @@
-/**
- * Onboarding — Pillowtalk-layout adaptation
- *
- * Visual references:
- *  - Pillowtalk: warm dark bg #231B18, large lowercase brand voice questions,
- *    pale-lime pill CTAs (#E3FF92), minimal single-question-per-screen progression.
- *
- * Orion adaptation:
- *  - bg: #0E0B09, accent pill: #D4F57A, lowercase copy style,
- *    Orion mark top-left (Pillowtalk logo position), progress dots top-right.
- */
-
-import React, { useState, useRef } from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Dimensions,
-  StatusBar,
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
-import { OrionLogo } from '../components/OrionLogo';
-import { Colors } from '../theme/colors';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, withDelay } from 'react-native-reanimated';
+import { LivingOrb } from '../components/LivingOrb';
+import { useVoiceSession } from '../hooks/useVoiceSession';
+import { useOrionStore } from '../store/useOrionStore';
+import { TOKENS } from '../constants/tokens';
+import { PDS_TYPOGRAPHY } from '../constants/typography';
 
 const { width } = Dimensions.get('window');
 
-const ONBOARDING_STEPS = [
+const ONBOARDING_SEQUENCE = [
   {
-    key: 'name',
-    question: 'what should i call you?',
-    placeholder: 'your name or pseudonym',
-    note: null,
+    id: 'intro',
+    orionSays: ["I'm Orion.", "I want to understand how you live, what you're building, and what matters to you.", "Ready?"],
+    inputType: 'voice', // or 'pills'
+    placeholder: 'speak or type "ready"...'
   },
   {
-    key: 'identity',
-    question: 'who are you striving to become?',
-    placeholder: 'architect, builder, creator…',
-    note: null,
+    id: 'name',
+    orionSays: ["What should I call you?"],
+    inputType: 'voice',
+    placeholder: 'your name...'
   },
   {
-    key: 'values',
-    question: 'what core values guide your decisions?',
-    placeholder: 'autonomy, mastery, relentless focus…',
-    note: null,
+    id: 'identity',
+    orionSays: ["Who are you striving to become?"],
+    inputType: 'voice',
+    placeholder: 'architect, creator...'
   },
   {
-    key: 'building',
-    question: 'what are you building right now?',
-    placeholder: 'your main project or mission…',
-    note: null,
+    id: 'direction',
+    orionSays: ["What are you building right now?"],
+    inputType: 'voice',
+    placeholder: 'your main project...'
   },
   {
-    key: 'principles',
-    question: 'name one principle you refuse to break.',
-    placeholder: 'systems over willpower…',
-    note: 'this will anchor every orion response',
+    id: 'values',
+    orionSays: ["What parts of your life matter most?"],
+    inputType: 'voice',
+    placeholder: 'family, craft, health...'
   },
+  {
+    id: 'mentor',
+    orionSays: ["What should I call you out on when I notice you drifting?"],
+    inputType: 'voice',
+    placeholder: 'scrolling, procrastination...'
+  },
+  {
+    id: 'proactivity',
+    orionSays: ["How proactive should I be?"],
+    inputType: 'pills',
+    options: ['Quiet', 'Balanced', 'Proactive']
+  },
+  {
+    id: 'outcome',
+    orionSays: ["Give me one thing you want handled."],
+    inputType: 'voice',
+    placeholder: 'tell me...'
+  }
 ];
 
-export default function Onboarding() {
+export default function OnboardingScreen() {
   const router = useRouter();
+  const { orbState, voiceState, setVoiceState } = useOrionStore();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [input, setInput] = useState('');
+  const [inputText, setInputText] = useState('');
+  
+  // Script engine
+  const [scriptLineIndex, setScriptLineIndex] = useState(0);
+  const [isOrionSpeaking, setIsOrionSpeaking] = useState(false);
+  const [isListeningForAnswer, setIsListeningForAnswer] = useState(false);
+  const [spokenText, setSpokenText] = useState(''); // Text currently being spoken by Orion
 
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim  = useRef(new Animated.Value(1)).current;
+  const textOpacity = useSharedValue(0);
 
-  const current = ONBOARDING_STEPS[step];
-  const progress = (step + 1) / ONBOARDING_STEPS.length;
+  const currentStep = ONBOARDING_SEQUENCE[step];
 
-  const animateTransition = (dir: 'forward' | 'back', cb: () => void) => {
-    const outX = dir === 'forward' ? -width * 0.08 : width * 0.08;
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: outX,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      cb();
-      slideAnim.setValue(dir === 'forward' ? width * 0.06 : -width * 0.06);
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
-      ]).start();
-    });
-  };
-
-  const handleNext = () => {
-    if (!input.trim()) return;
-    Haptics.selectionAsync().catch(() => {});
-
-    const newAnswers = { ...answers, [current.key]: input.trim() };
-    setAnswers(newAnswers);
-
-    if (step < ONBOARDING_STEPS.length - 1) {
-      animateTransition('forward', () => {
-        setStep(step + 1);
-        const nextKey = ONBOARDING_STEPS[step + 1].key;
-        setInput(newAnswers[nextKey] || '');
-      });
+  const handleNextStep = useCallback(() => {
+    if (step < ONBOARDING_SEQUENCE.length - 1) {
+      setStep(s => s + 1);
+      setScriptLineIndex(0);
+      setInputText('');
+      setSpokenText('');
     } else {
-      completeOnboarding(newAnswers);
+      completeOnboarding();
     }
-  };
+  }, [step]);
 
-  const handleBack = () => {
-    if (step === 0) return;
-    Haptics.selectionAsync().catch(() => {});
-    const newAnswers = { ...answers, [current.key]: input };
-    animateTransition('back', () => {
-      setStep(step - 1);
-      const prevKey = ONBOARDING_STEPS[step - 1].key;
-      setInput(newAnswers[prevKey] || '');
-    });
-    setAnswers(newAnswers);
-  };
+  const { speak, startListening, stopListening } = useVoiceSession({
+    onTranscript: (text, isFinal) => {
+      setInputText(text);
+      if (isFinal && text.trim().length > 0) {
+        // Auto-advance if voice finishes
+        stopListening();
+        setAnswers(prev => ({ ...prev, [currentStep.id]: text }));
+        setTimeout(handleNextStep, 500);
+      }
+    }
+  });
 
-  const completeOnboarding = async (finalAnswers: Record<string, string>) => {
+  // Play script lines
+  useEffect(() => {
+    if (!currentStep) return;
+    const lines = currentStep.orionSays;
+    if (scriptLineIndex < lines.length) {
+      const line = lines[scriptLineIndex];
+      setSpokenText(line);
+      setIsOrionSpeaking(true);
+      setIsListeningForAnswer(false);
+      textOpacity.value = 0;
+      textOpacity.value = withTiming(1, { duration: 600 });
+      
+      // Speak the line
+      speak(line);
+      
+      // Very hacky delay to mimic wait-for-TTS-to-finish without native callbacks mapped easily
+      // We know TTS takes approx 1.5s per line. In production, use expo-speech onDone callback properly via voice session hook.
+      // For the prototype, we use a simple timeout based on word count.
+      const wordCount = line.split(' ').length;
+      const ms = Math.max(wordCount * 400 + 800, 2000);
+      
+      const timer = setTimeout(() => {
+        setIsOrionSpeaking(false);
+        textOpacity.value = withTiming(0, { duration: 400 });
+        setTimeout(() => setScriptLineIndex(idx => idx + 1), 400);
+      }, ms);
+      return () => clearTimeout(timer);
+    } else {
+      // Done speaking lines for this step, open mic if voice input expected
+      if (currentStep.inputType === 'voice') {
+        setIsListeningForAnswer(true);
+        setTimeout(() => {
+          startListening();
+        }, 500);
+      }
+    }
+  }, [step, scriptLineIndex, speak, startListening]);
+
+  const completeOnboarding = async () => {
+    speak("I'm here.");
     const portrait = {
-      name:       finalAnswers.name || 'Orion User',
-      identity:   finalAnswers.identity || 'Systems Architect',
-      values:     finalAnswers.values || 'Autonomy, mastery',
-      principles: finalAnswers.principles || 'Systems over willpower',
-      strengths:  'Rapid execution',
-      blind_spots:'Over-engineering',
-      dreams:     finalAnswers.building || 'High agency execution',
-      relationships: 'Core collaborators',
+      identity: answers.identity || 'Systems Architect',
+      proactivity: answers.proactivity || 'Balanced',
+      firstOutcome: answers.outcome || 'None',
     };
     await AsyncStorage.setItem('orion_portrait', JSON.stringify(portrait));
     await AsyncStorage.setItem('orion_onboarded', 'true');
-    router.replace('/');
+    setTimeout(() => {
+      router.replace('/');
+    }, 2000);
   };
 
-  const isLast = step === ONBOARDING_STEPS.length - 1;
+  const handlePillSelect = (option: string) => {
+    setAnswers(prev => ({ ...prev, [currentStep.id]: option }));
+    handleNextStep();
+  };
+
+  const submitText = () => {
+    if (inputText.trim()) {
+      stopListening();
+      setAnswers(prev => ({ ...prev, [currentStep.id]: inputText }));
+      handleNextStep();
+    }
+  };
+
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+    transform: [{ translateY: withTiming(textOpacity.value === 1 ? 0 : 10, { duration: 400 }) }]
+  }));
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Top bar — mark left, dots right (Pillowtalk logo + nav pattern) */}
-        <View style={styles.topBar}>
-          <OrionLogo size={28} animated={false} />
-          <View style={styles.dots}>
-            {ONBOARDING_STEPS.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  i === step && styles.dotActive,
-                  i < step && styles.dotDone,
-                ]}
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.orbContainer}>
+        <LivingOrb state={orbState} />
+      </View>
+
+      <View style={styles.contentContainer}>
+        {/* Orion's speech */}
+        <Animated.Text style={[styles.orionText, animatedTextStyle]}>
+          {spokenText}
+        </Animated.Text>
+
+        {/* User Input Area */}
+        {scriptLineIndex >= currentStep.orionSays.length && (
+          <View style={styles.inputWrapper}>
+            {currentStep.inputType === 'voice' ? (
+              <TextInput
+                style={styles.textInput}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={currentStep.placeholder}
+                placeholderTextColor={TOKENS.colors.muted}
+                onSubmitEditing={submitText}
+                autoFocus={true}
+                returnKeyType="send"
               />
-            ))}
+            ) : (
+              <View style={styles.pillsContainer}>
+                {currentStep.options?.map(opt => (
+                  <TouchableOpacity key={opt} style={styles.pill} onPress={() => handlePillSelect(opt)}>
+                    <Text style={styles.pillText}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-        </View>
-
-        {/* Question area */}
-        <Animated.View
-          style={[
-            styles.questionArea,
-            { opacity: fadeAnim, transform: [{ translateX: slideAnim }] },
-          ]}
-        >
-          {/* Step counter — Pillowtalk uses small muted uppercase labels */}
-          <Text style={styles.stepLabel}>{step + 1} / {ONBOARDING_STEPS.length}</Text>
-
-          <Text style={styles.question}>{current.question}</Text>
-
-          {current.note && (
-            <Text style={styles.questionNote}>{current.note}</Text>
-          )}
-
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder={current.placeholder}
-            placeholderTextColor={Colors.textMuted}
-            autoFocus
-            returnKeyType={isLast ? 'done' : 'next'}
-            onSubmitEditing={handleNext}
-            multiline={false}
-          />
-        </Animated.View>
-
-        {/* Bottom controls */}
-        <View style={styles.bottomBar}>
-          {step > 0 ? (
-            <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-              <Text style={styles.backText}>← back</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.backBtn} />
-          )}
-
-          {/* Pillowtalk-style pale-lime pill CTA */}
-          <TouchableOpacity
-            style={[styles.pillBtn, !input.trim() && styles.pillBtnDisabled]}
-            onPress={handleNext}
-            disabled={!input.trim()}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.pillText}>
-              {isLast ? 'start →' : 'continue →'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  container: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: TOKENS.colors.bg,
   },
-  kav: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'space-between',
-  },
-  topBar: {
-    flexDirection: 'row',
+  orbContainer: {
+    flex: 0.4,
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 8,
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.borderLight,
-  },
-  dotActive: {
-    backgroundColor: Colors.accent,
-    width: 18,
-  },
-  dotDone: {
-    backgroundColor: Colors.accentMuted,
-  },
-
-  // Question area
-  questionArea: {
-    flex: 1,
-    justifyContent: 'center',
     paddingBottom: 40,
   },
-  stepLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    letterSpacing: 2,
-    textTransform: 'lowercase',
-    marginBottom: 28,
-  },
-  question: {
-    fontSize: 30,
-    fontWeight: '300',
-    color: Colors.textPrimary,
-    lineHeight: 38,
-    letterSpacing: -0.5,
-    marginBottom: 10,
-  },
-  questionNote: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginBottom: 32,
-    fontStyle: 'italic',
-  },
-  input: {
-    marginTop: 32,
-    fontSize: 20,
-    fontWeight: '300',
-    color: Colors.textPrimary,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    paddingVertical: 12,
-    letterSpacing: -0.3,
-  },
-
-  // Bottom bar
-  bottomBar: {
-    flexDirection: 'row',
+  contentContainer: {
+    flex: 0.6,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: Platform.OS === 'ios' ? 16 : 32,
-    paddingTop: 16,
   },
-  backBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    minWidth: 60,
+  orionText: {
+    ...PDS_TYPOGRAPHY.header2,
+    color: TOKENS.colors.primary,
+    textAlign: 'center',
+    marginBottom: 60,
   },
-  backText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    fontWeight: '300',
+  inputWrapper: {
+    width: '100%',
+    alignItems: 'center',
   },
-
-  // Pillowtalk pill CTA — #D4F57A, border-radius 50, padding 12 40
-  pillBtn: {
-    backgroundColor: Colors.accent,
-    borderRadius: 50,
-    paddingHorizontal: 40,
-    paddingVertical: 14,
+  textInput: {
+    ...PDS_TYPOGRAPHY.bodyL,
+    color: TOKENS.colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.colors.border,
+    paddingVertical: 12,
+    width: '100%',
+    textAlign: 'center',
   },
-  pillBtnDisabled: {
-    opacity: 0.3,
+  pillsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  pill: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    backgroundColor: TOKENS.colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: TOKENS.colors.border,
   },
   pillText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.accentText,
-    letterSpacing: 0.3,
-  },
+    ...PDS_TYPOGRAPHY.bodyM,
+    color: TOKENS.colors.primary,
+  }
 });

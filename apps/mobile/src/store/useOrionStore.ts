@@ -18,6 +18,42 @@ import { fetchKnowledgeNodes } from '../services/dbService';
 
 // ─── Core Types ───────────────────────────────────────────────────────────────
 
+// ── Phase 8: Environment State Machine ────────────────────────────────────────
+
+export type OrionEnvironment =
+  | 'LIVING_MODE'
+  | 'TEXT_MODE'
+  | 'NEEDS_YOU'
+  | 'ACTION_CENTRE'
+  | 'JOURNEY'
+  | 'MEMORY'
+  | 'CALENDAR'
+  | 'EMAIL'
+  | 'BROWSER'
+  | 'PROJECT'
+  | 'CONNECTED_WORLD';
+
+export type OrbState =
+  | 'breathing'
+  | 'listening'
+  | 'thinking'
+  | 'searching'
+  | 'speaking'
+  | 'working'
+  | 'needs_you'
+  | 'error';
+
+export type VoiceSessionState =
+  | 'IDLE'
+  | 'LISTENING'
+  | 'PROCESSING'
+  | 'PLAYING'
+  | 'INTERRUPTED'
+  | 'ENDED'
+  | 'ERROR';
+
+// ── Legacy Stage type (kept for backward compat) ──────────────────────────────
+
 export type AppStage = 'LISTENING' | 'PROCESSING' | 'CONSTELLATION' | 'FILE_STACK' | 'EDIT_MODE' | 'CHAT';
 
 export interface CardItem {
@@ -76,6 +112,13 @@ const DEFAULT_NODE: ConstellationNode = {
 // ─── State Shape ──────────────────────────────────────────────────────────────
 
 interface OrionState {
+  // ── Phase 8: Environment state machine ────────────────────────────────
+  environment: OrionEnvironment;
+  environmentHistory: OrionEnvironment[];
+  orbState: OrbState;
+  voiceState: VoiceSessionState;
+  transientSpeech: string | null; // Text displayed below orb while speaking
+
   // App flow
   stage: AppStage;
   activeNode: ConstellationNode;
@@ -108,6 +151,14 @@ interface OrionState {
 // ─── Actions Shape ────────────────────────────────────────────────────────────
 
 interface OrionActions {
+  // ── Phase 8: Environment navigation ──────────────────────────────────
+  navigate: (env: OrionEnvironment) => void;
+  back: () => void;
+  home: () => void;
+  setOrbState: (state: OrbState) => void;
+  setVoiceState: (state: VoiceSessionState) => void;
+  setTransientSpeech: (text: string | null) => void;
+
   // Stage control
   setStage: (stage: AppStage) => void;
   selectNode: (node: ConstellationNode) => void;
@@ -145,6 +196,13 @@ export const useOrionStore = create<OrionState & OrionActions>()(
   immer(
     persist(
       (set, get) => ({
+        // ── Phase 8: Initial Environment State ─────────────────────────────
+        environment: 'LIVING_MODE',
+        environmentHistory: [],
+        orbState: 'breathing',
+        voiceState: 'IDLE',
+        transientSpeech: null,
+
         // ── Initial State ──────────────────────────────────────────────────
         stage: 'LISTENING',
         activeNode: DEFAULT_NODE,
@@ -166,6 +224,44 @@ export const useOrionStore = create<OrionState & OrionActions>()(
           autoReschedule: false,
           hapticFeedback: true,
         },
+
+        // ── Phase 8: Environment Navigation ───────────────────────────────
+        navigate: (env) =>
+          set((s) => {
+            if (s.environment !== env) {
+              s.environmentHistory.push(s.environment);
+              s.environment = env;
+            }
+          }),
+        back: () =>
+          set((s) => {
+            if (s.environmentHistory.length > 0) {
+              const prev = s.environmentHistory.pop();
+              s.environment = prev as OrionEnvironment;
+            } else {
+              s.environment = 'LIVING_MODE'; // Fallback to safe base
+            }
+          }),
+        home: () =>
+          set((s) => {
+            s.environment = 'LIVING_MODE';
+            s.environmentHistory = [];
+          }),
+        setOrbState: (state) => set((s) => { s.orbState = state; }),
+        setVoiceState: (state) =>
+          set((s) => {
+            s.voiceState = state;
+            // Auto-sync orb visual state
+            switch (state) {
+              case 'IDLE': s.orbState = 'breathing'; break;
+              case 'LISTENING': s.orbState = 'listening'; break;
+              case 'PROCESSING': s.orbState = 'thinking'; break;
+              case 'PLAYING': s.orbState = 'speaking'; break;
+              case 'ERROR': s.orbState = 'error'; break;
+              // INTERRUPTED and ENDED usually transition quickly to another state, leave orb as is for a moment
+            }
+          }),
+        setTransientSpeech: (text) => set((s) => { s.transientSpeech = text; }),
 
         // ── Stage Control ─────────────────────────────────────────────────
         setStage: (stage) =>

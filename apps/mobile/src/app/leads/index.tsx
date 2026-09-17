@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
 import { Target, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../../theme/colors';
-import { ExecutiveDock } from '../../components/ExecutiveDock';
+
 import { fetchLeads } from '../../services/dbService';
 
 export default function LeadsScreen() {
@@ -52,7 +52,6 @@ export default function LeadsScreen() {
         )}
       </ScrollView>
 
-      <ExecutiveDock />
     </SafeAreaView>
   );
 }

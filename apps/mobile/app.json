@@ -40,6 +40,14 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "ios": {
+            "bundleId": "com.pseudonyms.orion.ShareExtension"
+          }
+        }
       ]
     ],
     "experiments": {

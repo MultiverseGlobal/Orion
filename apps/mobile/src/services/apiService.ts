@@ -13,6 +13,15 @@ const getBaseUrl = () => {
 
 const WEB_API_URL = getBaseUrl();
 
+// ── Orion Express Server URL ──────────────────────────────────────────────────
+const getServerUrl = () => {
+  if (process.env.EXPO_PUBLIC_SERVER_URL) return process.env.EXPO_PUBLIC_SERVER_URL;
+  if (Platform.OS === 'android') return 'http://10.0.2.2:3005';
+  return 'http://localhost:3005';
+};
+
+const SERVER_URL = getServerUrl();
+
 export interface ChatResponse {
   reply: string;
   time: string;
@@ -114,3 +123,208 @@ export function streamOrionChat(
 
   return es;
 }
+
+export async function getHomeState() {
+  try {
+    const res = await fetch(`${WEB_API_URL}/home`);
+    if (!res.ok) throw new Error('Failed to fetch home state');
+    return await res.json();
+  } catch (err) {
+    console.error('Error fetching home state:', err);
+    return null;
+  }
+}
+
+// ── Orientation (polled by ProactivePresenceManager) ──────────────────────────
+
+export interface OrientationResponse {
+  success: boolean;
+  orbState: string;
+  pendingApprovals: PendingApprovalItem[];
+  proactiveSpeech: { text: string; reason: string } | null;
+  focusContext?: { currentActivity?: string; availableMinutes?: number };
+}
+
+export interface PendingApprovalItem {
+  id: string;
+  tool: string;
+  capability: string;
+  what: string;
+  why: string;
+  whatWillChange: { target: string; from: string | null; to: string };
+  riskLevel: string;
+  stagedAt: string;
+  supportsRollback: boolean;
+}
+
+export async function fetchOrientation(userId = 'user_ben'): Promise<OrientationResponse | null> {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/home/orientation?userId=${userId}`);
+    if (!res.ok) throw new Error(`orientation failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[apiService] fetchOrientation error:', err);
+    return null;
+  }
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
+export interface ActionItem {
+  id: string;
+  description: string;
+  tool: string;
+  capability: string;
+  status: string;
+  risk_level: string;
+  created_at: string;
+  payload?: Record<string, any>;
+}
+
+export async function fetchActions(userId = 'user_ben', status?: string): Promise<{ actions: ActionItem[] } | null> {
+  try {
+    const qs = status ? `&status=${status}` : '';
+    const res = await fetch(`${SERVER_URL}/api/agency/actions?userId=${userId}${qs}`);
+    if (!res.ok) throw new Error(`actions failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[apiService] fetchActions error:', err);
+    return null;
+  }
+}
+
+export async function approveAction(id: string, userId = 'user_ben') {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/home/action/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    if (!res.ok) throw new Error(`approve failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('[apiService] approveAction error:', err);
+    throw err;
+  }
+}
+
+export async function rejectAction(id: string, userId = 'user_ben', reason?: string) {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/home/action/${id}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, reason }),
+    });
+    if (!res.ok) throw new Error(`reject failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('[apiService] rejectAction error:', err);
+    throw err;
+  }
+}
+
+// ── Cognitive interact (voice & text conversation) ────────────────────────────
+
+export interface CognitiveResponse {
+  success: boolean;
+  data: {
+    reply: string;
+    actions?: any[];
+    memories?: any[];
+  };
+}
+
+export async function sendMessage(
+  userId = 'user_ben',
+  message: string,
+  surface: 'voice' | 'chat' = 'voice'
+): Promise<CognitiveResponse | null> {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/cognitive/interact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, message, surface }),
+    });
+    if (!res.ok) throw new Error(`interact failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[apiService] sendMessage error:', err);
+    return null;
+  }
+}
+
+// ── Memory (for Memory environment) ───────────────────────────────────────────
+
+export async function fetchMemoryRecords(userId = 'user_ben') {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/personal-model/overview?userId=${userId}`);
+    if (!res.ok) throw new Error(`memory fetch failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[apiService] fetchMemoryRecords error:', err);
+    return null;
+  }
+}
+
+export async function forgetMemory(table: string, id: string, userId = 'user_ben') {
+  try {
+    const res = await fetch(`${SERVER_URL}/api/memory/forget`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, table, id }),
+    });
+    if (!res.ok) throw new Error(`forget failed: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('[apiService] forgetMemory error:', err);
+    throw err;
+  }
+}
+
+export interface MemoryItem {
+  id: string;
+  table: string;
+  content: string;
+  description: string;
+  importance: number;
+  confidence?: number;
+  scope?: string;
+  created_at: string;
+}
+
+// ── Journey (for Journey environment) ─────────────────────────────────────────
+
+export interface JourneyEvent {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  created_at: string;
+  reasoning?: string;
+}
+
+export async function fetchJourneyData(userId = 'user_ben') {
+  try {
+    const [outcomesRes, overviewRes] = await Promise.all([
+      fetch(`${SERVER_URL}/api/personal-model/outcomes?userId=${userId}`),
+      fetch(`${SERVER_URL}/api/personal-model/overview?userId=${userId}`)
+    ]);
+
+    if (!outcomesRes.ok || !overviewRes.ok) {
+      throw new Error('journey data fetch failed');
+    }
+
+    const outcomesData = await outcomesRes.json();
+    const overviewData = await overviewRes.json();
+
+    return {
+      outcomes: outcomesData,
+      overview: overviewData,
+    };
+  } catch (err) {
+    console.warn('[apiService] fetchJourneyData error:', err);
+    return null;
+  }
+}
+

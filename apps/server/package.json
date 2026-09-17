@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@orion/server",
   "version": "1.0.0",
   "private": true,
@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test:foundation": "tsx src/tests/phase1Foundation.test.ts",
+    "test:cognitive": "tsx src/tests/phase2CognitiveCore.test.ts",
+    "test:memory": "tsx src/tests/phase3Memory.test.ts",
+    "test:calendar": "tsx src/tests/phase4Calendar.test.ts",
+    "test:agency": "tsx src/tests/phase5Agency.test.ts",
+    "test:home": "tsx src/tests/phase6Home.test.ts"
   },
   "dependencies": {
     "express": "^4.21.2",

@@ -3,16 +3,20 @@ import { Colors } from '../theme/colors';
 
 export const TOKENS = {
   colors: {
+    ...Colors,
+    // Semantic mappings used in Phase 8 components
+    primary: Colors.textPrimary,
+    text: Colors.textPrimary,
+    muted: Colors.textMuted,
+    borderLight: Colors.borderLight,
+    surfaceHighlight: Colors.bgElevated,
+    border: Colors.borderSubtle,
+    surface: Colors.bgCard,
+    
     // Natural Light Theme (Glebich Voice AI Design)
     background: Colors.porcelainSubtle,     // Soft crisp white mist
-    surface: Colors.porcelainCard,        // Pure white card surfaces
     elevated: Colors.porcelainSubtle,       // Subtle grey container
-    border: Colors.borderMedium,         // Soft border stroke
-    textPrimary: Colors.textPrimary,    // High-contrast slate black
-    textMuted: Colors.textSecondary,      // Muted slate text
     textFaint: Colors.textMuted,      // Faint placeholder text
-    accent: '#2563EB',         // Vibrant natural blue
-    accentGlow: 'rgba(37, 99, 235, 0.25)',
     accentGlowSoft: 'rgba(37, 99, 235, 0.08)',
     waveDark: '#2C2D30',       // Dark liquid wave path
     waveMid: '#5C5E64',        // Mid liquid wave path

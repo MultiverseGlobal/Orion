@@ -57,6 +57,6 @@ export async function pushVoiceThoughtToMetaphor(thought: { title: string; text:
  * 1-Tap launches Clario Studio with the voice note transcribed script
  */
 export function launchClarioFromThought(thoughtText: string, title = 'Orion Voice Note') {
-  const url = `https://atlas-scale.vercel.app/?script=${encodeURIComponent(thoughtText)}&mode=video&name=${encodeURIComponent(title)}`;
+  const url = `https://clariovid.vercel.app/?script=${encodeURIComponent(thoughtText)}&mode=video&name=${encodeURIComponent(title)}`;
   Linking.openURL(url).catch(err => console.warn('Failed to open Clario:', err));
 }

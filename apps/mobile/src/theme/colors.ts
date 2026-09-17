@@ -1,79 +1,58 @@
 /**
- * Orion — Warm Dark Design System
- * Derived from Pillowtalk's verified color palette (#231B18 hero, #E3FF92 accent)
- * adapted for Orion's executive/reflective identity.
+ * Orion — Pseudonyms PDS-v5 Design System
+ * Unified porcelain/obsidian palette adapted for Orion's voice & reflective companion.
  */
 export const Colors = {
-  // ── Core Backgrounds ────────────────────────────────────────────────
-  /** Hero/page background — Pillowtalk's #231B18 darkened for OLED depth */
-  bg:            '#0E0B09',
-  /** Warm dark card surface */
-  bgCard:        '#1C1612',
-  /** Slightly elevated surface */
-  bgElevated:    '#241E19',
-  /** Modal / sheet surface */
-  bgSheet:       '#2A2219',
+  // ── Core Dark Studio Backgrounds (Default for Orion Voice Interface) ──
+  bg:            '#07080C', // PDS-v5 Dark Canvas (Warm Obsidian)
+  bgCard:        '#0E1118', // Surface-1 Frosted Glass base
+  bgElevated:    '#161922', // Surface-2 Elevated Panel
+  bgSheet:       '#1D212D', // Surface-3 Modal / Sheet Surface
 
-  // ── Accent ──────────────────────────────────────────────────────────
-  /** Primary CTA — Pillowtalk's pale-lime #E3FF92 shifted warmer for Orion */
-  accent:        '#D4F57A',
-  /** Text/icons on accent background */
-  accentText:    '#0B0E04',
-  /** Accent at reduced opacity for borders/glows */
-  accentMuted:   'rgba(212, 245, 122, 0.2)',
+  // ── Core Light Mode Tokens ──
+  lightCanvas:   '#F8F7F4', // Porcelain page background
+  lightCard:     '#FFFFFF', // Surface-1 card
+  lightElevated: '#F1F0EC', // Surface-2 recessed
+  lightHover:    '#EBEBE6', // Surface-3 hover
 
-  // ── Typography ──────────────────────────────────────────────────────
-  /** High-contrast headings */
-  textPrimary:   '#F0EDE8',
-  /** Body copy */
-  textSecondary: '#A39990',
-  /** Timestamps, captions, subtitles */
-  textMuted:     '#645C58',
-  /** Text on accent pill */
-  textInverse:   '#0B0E04',
+  // ── Primary Accent & Specular Glow ──
+  accent:        '#FFFFFF', // Pure crisp CTA
+  accentGlow:    'rgba(255, 255, 255, 0.15)',
+  accentText:    '#07080C', // Obsidian text on accent pill
+  accentMuted:   'rgba(255, 255, 255, 0.20)',
 
-  // ── Section / Card Backgrounds (Pillowtalk section palette) ─────────
-  /** Pillowtalk product-showcase bg — teal */
-  sectionTeal:   '#57868E',
-  /** Pillowtalk community bg — sage */
-  sectionSage:   '#A2B2A6',
-  /** Pillowtalk guided-prompts bg — lavender */
-  sectionLavender: '#9496E8',
-  /** Warm peach card */
-  sectionPeach:  '#F2A594',
-  /** Acid green card */
-  sectionLime:   '#D5EF8A',
-  /** Pale green card */
-  sectionMint:   '#D5FFC1',
-  /** Warm brown card */
-  sectionBrown:  '#C2C2A9',
-  /** Deep navy card */
-  sectionNavy:   '#222D40',
-  /** Warm yellow card */
-  sectionYellow: '#EFE6B1',
+  // ── Typography ──
+  textPrimary:   '#EEF0F8', // Crisp off-white
+  textSecondary: 'rgba(238, 240, 248, 0.65)',
+  textMuted:     'rgba(238, 240, 248, 0.40)',
+  textInverse:   '#07080C',
 
-  // ── Borders & Dividers ───────────────────────────────────────────────
-  borderSubtle:  'rgba(240, 237, 232, 0.06)',
-  borderLight:   'rgba(240, 237, 232, 0.12)',
-  borderAccent:  'rgba(212, 245, 122, 0.25)',
+  // ── Section Card Backgrounds (Refined Deep Studio Tones) ──
+  sectionTeal:   '#16282E',
+  sectionSage:   '#1B2620',
+  sectionLavender: '#21223A',
+  sectionPeach:  '#2D1F1C',
+  sectionLime:   '#1F2913',
+  sectionMint:   '#142B1A',
+  sectionBrown:  '#24231E',
+  sectionNavy:   '#111927',
+  sectionYellow: '#2A2614',
 
-  // ── Semantic States ──────────────────────────────────────────────────
-  /** Success */
-  success:       '#6FCF97',
-  /** Error */
-  error:         '#EB5757',
-  /** Warning */
-  warning:       '#F2994A',
+  // ── Borders & Dividers ──
+  borderSubtle:  'rgba(255, 255, 255, 0.06)',
+  borderLight:   'rgba(255, 255, 255, 0.10)',
+  borderAccent:  'rgba(255, 255, 255, 0.22)',
 
-  // ── Legacy aliases (keep for components not yet migrated) ───────────
-  /** @deprecated use bg */
-  porcelain:        '#0E0B09',
-  /** @deprecated use bgCard */
-  porcelainCard:    '#1C1612',
-  /** @deprecated use bgElevated */
-  porcelainSubtle:  '#241E19',
-  /** @deprecated use bg */
-  obsidian:         '#0E0B09',
-  /** @deprecated use accent */
-  signalAmber:      '#D4F57A',
+  // ── Semantic States ──
+  success:       '#22C55E',
+  warning:       '#F59E0B',
+  error:         '#EF4444',
+  info:          '#38BDF8',
+
+  // ── Legacy aliases for backward compatibility ──
+  porcelain:        '#F8F7F4',
+  porcelainCard:    '#FFFFFF',
+  porcelainSubtle:  '#F1F0EC',
+  obsidian:         '#07080C',
+  signalAmber:      '#F59E0B',
 };

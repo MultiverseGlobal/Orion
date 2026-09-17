@@ -25,6 +25,13 @@ import { BrainGateway, getTimeOfDay } from './services/brainGateway';
 import { getWorldModel, getContextSummary, extractEntitiesFromText, decayConfidence } from './services/memoryGraph';
 import { analyzeConversation, scoreSentiment } from './services/patternEngine';
 import { dispatchAction } from './services/actionDispatcher';
+import { personalModelRouter } from './routes/personalModel';
+import { cognitiveRouter } from './routes/cognitive';
+import { memoryRouter } from './routes/memory';
+import { calendarRouter } from './routes/calendar';
+import { agencyRouter } from './routes/agency';
+import { homeRouter } from './routes/home';
+import { getDb } from './db';
 
 dotenv.config();
 
@@ -33,6 +40,24 @@ const PORT = process.env.PORT || 3005;
 
 app.use(cors());
 app.use(express.json());
+
+// ─── Orion Build Spec V1 — Personal Model API ────────────────────────────────
+app.use('/api/personal-model', personalModelRouter);
+
+// ─── Orion Build Spec V1 — Cognitive Core API ─────────────────────────────────
+app.use('/api/cognitive', cognitiveRouter);
+
+// ─── Orion Build Spec V1 — Memory & Classification API ────────────────────────
+app.use('/api/memory', memoryRouter);
+
+// ─── Orion Build Spec V1 — Calendar & Availability API ────────────────────────
+app.use('/api/calendar', calendarRouter);
+
+// ─── Orion Build Spec V1 — Agency & Permissions API ───────────────────────────
+app.use('/api/agency', agencyRouter);
+
+// ─── Orion Build Spec V1 — Home UX, Approval & Action Centre API ─────────────
+app.use('/api/home', homeRouter);
 
 // ─── Atlas Integration Webhook ────────────────────────────────────────────────
 app.post('/api/webhooks/atlas', async (req: Request, res: Response) => {
@@ -43,11 +68,14 @@ app.post('/api/webhooks/atlas', async (req: Request, res: Response) => {
     // Save to Orion's Action Log / Queue
     await saveActionLog({
       id: `act_${Date.now()}`,
-      title: `Draft Outreach: ${prospect.companyName}`,
-      description: `Atlas identified a prospect: ${prospect.companyName}. Pain hypothesis: ${prospect.painHypothesis}.`,
+      actionType: 'atlas_coordinate',
+      payload: {
+        title: `Draft Outreach: ${prospect.companyName}`,
+        description: `Atlas identified a prospect: ${prospect.companyName}. Pain hypothesis: ${prospect.painHypothesis}.`,
+        metadata: prospect
+      },
       status: 'pending',
-      metadata: prospect,
-      timestamp: new Date().toISOString()
+      createdAt: new Date().toISOString()
     });
 
     res.status(200).json({ success: true, message: 'Prospect queued in Orion.' });
@@ -64,20 +92,22 @@ const METAPHOR_API_KEY = process.env.METAPHOR_API_KEY || '';
 export let ACTIVE_METAPHOR_PROJECT_ID = process.env.METAPHOR_PROJECT_ID || '';
 
 // ─── Sovereign Auto-Sync ──────────────────────────────────────────────────────
-setInterval(async () => {
-  try {
-    const res = await fetch(`${METAPHOR_URL}/api/v1/system/active-context`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.project_id && data.project_id !== ACTIVE_METAPHOR_PROJECT_ID) {
-        console.log(`[Auto-Sync] Context shifted to project: ${data.project_id}`);
-        ACTIVE_METAPHOR_PROJECT_ID = data.project_id;
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${METAPHOR_URL}/api/v1/system/active-context`);
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        if (data.project_id && data.project_id !== ACTIVE_METAPHOR_PROJECT_ID) {
+          console.log(`[Auto-Sync] Context shifted to project: ${data.project_id}`);
+          ACTIVE_METAPHOR_PROJECT_ID = data.project_id;
+        }
       }
+    } catch (e) {
+      // Ignore fetch errors to avoid spamming logs if Metaphor is offline
     }
-  } catch (e) {
-    // Ignore fetch errors to avoid spamming logs if Metaphor is offline
-  }
-}, 3000);
+  }, 3000);
+}
 
 interface MetaphorBrief {
   active_goals: string[];
@@ -1045,7 +1075,7 @@ app.post('/api/metaphor/webhook', async (req: Request, res: Response) => {
       
       await saveProactiveSignal({
         id: `proactive_handoff_${Date.now()}`,
-        type: 'warning',
+        type: 'pattern_alert',
         triggerTime: new Date().toISOString(),
         message: `${source_tool} just dispatched a task: ${action}. I have added it to your queue.`,
         acknowledged: false,
@@ -1114,11 +1144,21 @@ app.get('/api/drafts', async (req: Request, res: Response) => {
 
 export default app;
 
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`Orion Cognitive Companion API running on port ${PORT}`);
-    startProactiveWorker();
-  });
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
+  getDb()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Orion Cognitive Companion API running on port ${PORT}`);
+        startProactiveWorker();
+      });
+    })
+    .catch((err: any) => {
+      console.error('[Database] Failed to initialize SQLite database:', err);
+      app.listen(PORT, () => {
+        console.log(`Orion Cognitive Companion API running on port ${PORT} (DB initialization failed)`);
+        startProactiveWorker();
+      });
+    });
 }
 
 function startProactiveWorker() {

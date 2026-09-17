@@ -1,4 +1,4 @@
-﻿import { open, Database } from 'sqlite';
+import { open, Database } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import path from 'path';
 
@@ -127,9 +127,79 @@ export async function getDatabase(): Promise<Database> {
     );
   `);
 
+  // Self-healing columns for actions table (run before schema migrations to ensure columns exist for indexes)
+  const actionColumns = [
+    'capability TEXT',
+    "payload TEXT DEFAULT '{}'",
+    'idempotency_key TEXT',
+    'verification_result TEXT',
+    'error TEXT'
+  ];
+  for (const col of actionColumns) {
+    try { await db.exec(`ALTER TABLE actions ADD COLUMN ${col};`); } catch (_) {}
+  }
+
+  await runOrionMigrations(db);
+
+  try { await db.exec(`CREATE INDEX IF NOT EXISTS idx_actions_idempotency ON actions(user_id, idempotency_key);`); } catch (_) {}
+
   await seedInitialData(db);
+  await ensureDefaultUser(db);
 
   return db;
+}
+
+export const getDb = getDatabase;
+
+export async function closeDb(): Promise<void> {
+  if (db) {
+    await db.close();
+    db = null;
+  }
+}
+
+async function runOrionMigrations(database: Database): Promise<void> {
+  const fs = await import('fs');
+  const schemaPath = path.resolve(__dirname, 'db/schema.sqlite.sql');
+  if (fs.existsSync(schemaPath)) {
+    const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
+    await database.exec(schemaSql);
+  }
+}
+
+async function ensureDefaultUser(database: Database): Promise<void> {
+  const defaultUserId = 'user_ben';
+  const existing = await database.get('SELECT id FROM users WHERE id = ?', [defaultUserId]);
+  if (!existing) {
+    const now = new Date().toISOString();
+    await database.run(
+      `INSERT INTO users (id, display_name, timezone, locale, settings, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        defaultUserId,
+        'Ben',
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        'en-US',
+        JSON.stringify({ defaultOwner: 'USER', activeHorizon: '5_MONTHS' }),
+        now,
+        now
+      ]
+    );
+
+    await database.run(
+      `INSERT OR IGNORE INTO current_state (user_id, current_activity, current_focus, available_time_window, active_constraints, recent_events, last_updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        defaultUserId,
+        'Setting up Orion Foundation',
+        'Orion Architecture & Phase 1 Execution',
+        120,
+        JSON.stringify(['Phase 1 Foundation Priority', 'Preserve User Agency']),
+        JSON.stringify([]),
+        now
+      ]
+    );
+  }
 }
 
 async function seedInitialData(database: Database): Promise<void> {

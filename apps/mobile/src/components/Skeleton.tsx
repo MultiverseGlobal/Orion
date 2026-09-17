@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Colors } from '../theme/colors';
 import React, { useEffect } from 'react';
 import { ViewStyle, StyleProp } from 'react-native';

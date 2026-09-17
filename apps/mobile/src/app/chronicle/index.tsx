@@ -14,7 +14,7 @@ import {
 import { Clock, MessageCircle, Mic, Star } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../theme/colors';
-import { ExecutiveDock } from '../../components/ExecutiveDock';
+
 import { fetchDrafts } from '../../services/dbService';
 
 export default function JournalScreen() {
@@ -83,7 +83,6 @@ export default function JournalScreen() {
         )}
       </ScrollView>
 
-      <ExecutiveDock />
     </SafeAreaView>
   );
 }

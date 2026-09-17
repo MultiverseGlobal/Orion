@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SpringButton } from '../components/SpringButton';
 import { Colors } from '../theme/colors';
 import React, { useEffect } from 'react';

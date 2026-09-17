@@ -14,7 +14,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Colors } from '../../theme/colors';
-import { ExecutiveDock } from '../../components/ExecutiveDock';
+
 
 export default function InsightsScreen() {
   const [url, setUrl] = useState('');
@@ -111,7 +111,6 @@ export default function InsightsScreen() {
 
       </ScrollView>
 
-      <ExecutiveDock />
     </SafeAreaView>
   );
 }

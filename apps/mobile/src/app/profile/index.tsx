@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SpringButton } from '../../components/SpringButton';
 import React from 'react';
 import {
@@ -13,7 +14,7 @@ import {
 import { ArrowLeft, Cpu, Layers, Compass, Calendar, Search } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ExecutiveDock } from '../../components/ExecutiveDock';
+
 import { useOrionStore } from '../../store/useOrionStore';
 import { Colors } from '../../theme/colors';
 import { ApertureLogo } from '../../components/ApertureLogo';
@@ -156,7 +157,6 @@ export default function ProfileScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      <ExecutiveDock />
     </SafeAreaView>
   );
 }

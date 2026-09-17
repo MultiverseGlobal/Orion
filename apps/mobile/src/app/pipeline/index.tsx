@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
 import { Briefcase, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../../theme/colors';
-import { ExecutiveDock } from '../../components/ExecutiveDock';
+
 import { fetchDeals } from '../../services/dbService';
 
 export default function PipelineScreen() {
@@ -52,7 +52,6 @@ export default function PipelineScreen() {
         )}
       </ScrollView>
 
-      <ExecutiveDock />
     </SafeAreaView>
   );
 }

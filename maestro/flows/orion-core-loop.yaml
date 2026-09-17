@@ -1,0 +1,10 @@
+appId: com.pseudonyms.orion
+---
+- launchApp
+- assertVisible: "Orion is available. Tap to start talking."
+- tapOn:
+    id: "LivingOrb"
+- assertVisible: "Orion is listening."
+- tapOn:
+    id: "LivingOrb"
+- assertVisible: "Orion is available. Tap to start talking."

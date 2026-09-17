@@ -1,0 +1,11 @@
+appId: com.pseudonyms.orion
+---
+- launchApp
+- assertVisible: "Orion is available. Tap to start talking."
+- swipe:
+    direction: UP
+- assertVisible: "Orion"
+- tapOn: "Message Orion..."
+- inputText: "Test approval"
+- tapOn: "Send"
+- assertVisible: "Orion is thinking."
