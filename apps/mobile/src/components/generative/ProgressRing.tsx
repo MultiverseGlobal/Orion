@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 interface ProgressRingProps {
   jobId: string;
@@ -23,6 +23,8 @@ export function ProgressRing({ jobId }: ProgressRingProps) {
   path.addCircle(center, center, radius);
 
   useEffect(() => {
+    if (!supabase) return;
+
     // Initial fetch
     const fetchStatus = async () => {
       const { data } = await supabase

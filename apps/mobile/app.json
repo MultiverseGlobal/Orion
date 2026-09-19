@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Orion",
     "slug": "william",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -48,7 +48,8 @@
             "bundleId": "com.pseudonyms.orion.ShareExtension"
           }
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -7,7 +7,8 @@ import { router } from "expo-router";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
-const realtimeClient = createClient(supabaseUrl, supabaseAnonKey);
+// Only initialize if URL is provided to prevent crash on startup when env vars are missing
+const realtimeClient = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export function useHandoffReceiver(userId: string | undefined) {
   const [activeSession, setActiveSession] = useState<{
@@ -18,7 +19,7 @@ export function useHandoffReceiver(userId: string | undefined) {
   } | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !realtimeClient) return;
 
     const channelName = `handoff-${userId}`;
     const channel = realtimeClient.channel(channelName);
@@ -31,7 +32,7 @@ export function useHandoffReceiver(userId: string | undefined) {
     channel.subscribe();
 
     return () => {
-      realtimeClient.removeChannel(channel);
+      if (realtimeClient) realtimeClient.removeChannel(channel);
     };
   }, [userId]);
 
@@ -40,7 +41,7 @@ export function useHandoffReceiver(userId: string | undefined) {
 
 export function useHandoffBroadcast(userId: string | undefined, currentPath: string, searchParams: string = "") {
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !realtimeClient) return;
 
     const channelName = `handoff-${userId}`;
     const channel = realtimeClient.channel(channelName);
@@ -61,7 +62,7 @@ export function useHandoffBroadcast(userId: string | undefined, currentPath: str
     });
 
     return () => {
-      realtimeClient.removeChannel(channel);
+      if (realtimeClient) realtimeClient.removeChannel(channel);
     };
   }, [userId, currentPath, searchParams]);
 }

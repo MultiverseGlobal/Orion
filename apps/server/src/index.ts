@@ -32,6 +32,7 @@ import { calendarRouter } from './routes/calendar';
 import { agencyRouter } from './routes/agency';
 import { homeRouter } from './routes/home';
 import { getDb } from './db';
+import { requireAuth } from './middleware/auth';
 
 dotenv.config();
 
@@ -42,22 +43,22 @@ app.use(cors());
 app.use(express.json());
 
 // ─── Orion Build Spec V1 — Personal Model API ────────────────────────────────
-app.use('/api/personal-model', personalModelRouter);
+app.use('/api/personal-model', requireAuth, personalModelRouter);
 
 // ─── Orion Build Spec V1 — Cognitive Core API ─────────────────────────────────
-app.use('/api/cognitive', cognitiveRouter);
+app.use('/api/cognitive', requireAuth, cognitiveRouter);
 
 // ─── Orion Build Spec V1 — Memory & Classification API ────────────────────────
-app.use('/api/memory', memoryRouter);
+app.use('/api/memory', requireAuth, memoryRouter);
 
 // ─── Orion Build Spec V1 — Calendar & Availability API ────────────────────────
-app.use('/api/calendar', calendarRouter);
+app.use('/api/calendar', requireAuth, calendarRouter);
 
 // ─── Orion Build Spec V1 — Agency & Permissions API ───────────────────────────
-app.use('/api/agency', agencyRouter);
+app.use('/api/agency', requireAuth, agencyRouter);
 
 // ─── Orion Build Spec V1 — Home UX, Approval & Action Centre API ─────────────
-app.use('/api/home', homeRouter);
+app.use('/api/home', requireAuth, homeRouter);
 
 // ─── Atlas Integration Webhook ────────────────────────────────────────────────
 app.post('/api/webhooks/atlas', async (req: Request, res: Response) => {
