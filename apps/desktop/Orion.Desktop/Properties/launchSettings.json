@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Orion.Desktop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Orion.Desktop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

@@ -15,3 +15,7 @@ orion.db
 *.db
 *.db-journal
 
+bin/
+obj/
+.vs/
+*.user
